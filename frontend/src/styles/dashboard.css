@@ -1,0 +1,144 @@
+/* React Grid Layout Customizations */
+.react-grid-layout {
+  position: relative;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZG90cyBmaWxsPSIjOTk5IiBvcGFjaXR5PSIwLjQiPgo8Y2lyY2xlIGN4PSIxIiBjeT0iMSIgcj0iMSIvPgo8Y2lyY2xlIGN4PSI1IiBjeT0iMSIgcj0iMSIvPgo8Y2lyY2xlIGN4PSIxIiBjeT0iNSIgcj0iMSIvPgo8Y2lyY2xlIGN4PSI1IiBjeT0iNSIgcj0iMSIvPgo8L2RvdHM+Cjwvc3ZnPgo=');
+  background-position: bottom right;
+  padding: 0 3px 3px 0;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  cursor: se-resize;
+  z-index: 10;
+}
+
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}
+
+/* Widget styling enhancements */
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+}
+
+.react-grid-item.react-draggable-dragging > div {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transform: rotate(2deg);
+}
+
+/* Widget header hover effects */
+.widget-header:hover {
+  background-color: #f8fafc;
+}
+
+/* Drag handle styling */
+.react-grid-item > div {
+  cursor: move;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.react-grid-item > div:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Add widget menu styling */
+.add-widget-menu {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Theme-specific adjustments */
+.dark-theme .react-grid-item > div {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #f9fafb;
+}
+
+.patient-theme {
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+}
+
+.patient-theme .react-grid-item > div {
+  border-radius: 1rem;
+  border: 2px solid #e5e7eb;
+}
+
+.patient-theme .widget-header {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .react-grid-item > .react-resizable-handle {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Custom grid guidelines (optional) */
+.react-grid-layout.show-grid::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+    linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Widget content scrolling */
+.widget-content {
+  overflow-y: auto;
+  height: calc(100% - 52px); /* Subtract header height */
+}
+
+.widget-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.widget-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.widget-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.widget-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

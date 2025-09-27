@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "name": "Sarah Johnson",
+    "age": 65,
+    "sex": "female",
+    "chief_complaint": "abdominal_pain",
+    "symptoms": ["abdominal_pain", "weight_loss", "new_onset_diabetes"],
+    "family_history": ["pancreatic_cancer"],
+    "smoking_history": false,
+    "labs": {
+      "ca19_9": 85,
+      "glucose": 180,
+      "lipase": 45
+    },
+    "medical_history": ["hypertension", "osteoporosis"],
+    "current_medications": ["lisinopril", "metformin"],
+    "presentation_summary": "65-year-old female with 3-month history of epigastric pain, 15-pound weight loss, and new diagnosis of diabetes."
+  },
+  {
+    "id": 2,
+    "name": "Robert Chen",
+    "age": 58,
+    "sex": "male",
+    "chief_complaint": "weight_loss",
+    "symptoms": ["weight_loss", "fatigue", "back_pain"],
+    "family_history": [],
+    "smoking_history": true,
+    "labs": {
+      "ca19_9": 25,
+      "glucose": 95,
+      "lipase": 38
+    },
+    "medical_history": ["COPD", "former_smoker"],
+    "current_medications": ["albuterol", "prednisone"],
+    "presentation_summary": "58-year-old male former smoker with 20-pound unintentional weight loss over 4 months and persistent back pain."
+  },
+  {
+    "id": 3,
+    "name": "Maria Rodriguez",
+    "age": 72,
+    "sex": "female",
+    "chief_complaint": "diabetes",
+    "symptoms": ["new_onset_diabetes", "fatigue", "frequent_urination"],
+    "family_history": ["diabetes", "colon_cancer"],
+    "smoking_history": false,
+    "labs": {
+      "ca19_9": 42,
+      "glucose": 220,
+      "lipase": 52
+    },
+    "medical_history": ["arthritis", "hyperlipidemia"],
+    "current_medications": ["atorvastatin", "ibuprofen"],
+    "presentation_summary": "72-year-old female with new-onset diabetes, fatigue, and polyuria. No family history of pancreatic cancer."
+  },
+  {
+    "id": 4,
+    "name": "James Wilson",
+    "age": 45,
+    "sex": "male",
+    "chief_complaint": "routine_checkup",
+    "symptoms": ["mild_fatigue"],
+    "family_history": [],
+    "smoking_history": false,
+    "labs": {
+      "ca19_9": 15,
+      "glucose": 88,
+      "lipase": 32
+    },
+    "medical_history": [],
+    "current_medications": [],
+    "presentation_summary": "45-year-old healthy male for routine annual physical examination. No concerning symptoms."
+  }
+]
