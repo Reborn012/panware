@@ -21,6 +21,13 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Make startup scripts executable
+print_status "Making startup scripts executable..."
+chmod +x start.sh 2>/dev/null
+chmod +x quick-start.sh 2>/dev/null
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
     print_error "Node.js is not installed. Please install Node.js v18 or higher."
