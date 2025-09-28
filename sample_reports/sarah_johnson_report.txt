@@ -1,0 +1,59 @@
+MEDICAL REPORT
+
+Patient: Sarah Johnson
+DOB: 03/15/1959
+Date: September 27, 2025
+MRN: SJ-001234
+
+CHIEF COMPLAINT:
+Abdominal pain and unintentional weight loss
+
+HISTORY OF PRESENT ILLNESS:
+65-year-old female presents with a 3-month history of epigastric pain that radiates to the back. Patient reports 15-pound unintentional weight loss over the past 3 months. Pain is described as constant, dull, and worsening with eating. Associated symptoms include early satiety, nausea, and fatigue.
+
+PAST MEDICAL HISTORY:
+- Hypertension (controlled)
+- New-onset diabetes mellitus (diagnosed 2 months ago)
+- No prior history of pancreatitis
+
+FAMILY HISTORY:
+- Father: Pancreatic cancer (deceased at age 68)
+- Mother: Diabetes mellitus
+
+LABORATORY RESULTS:
+- CA 19-9: 145 U/mL (Normal: <37 U/mL) [HIGH]
+- CEA: 8.2 ng/mL (Normal: <3.0 ng/mL) [HIGH]
+- Glucose: 165 mg/dL (Normal: 70-100 mg/dL) [HIGH]
+- Total Bilirubin: 2.1 mg/dL (Normal: 0.2-1.2 mg/dL) [HIGH]
+- Alkaline Phosphatase: 180 U/L (Normal: 44-147 U/L) [HIGH]
+- Lipase: 89 U/L (Normal: 10-140 U/L) [NORMAL]
+
+IMAGING:
+CT Abdomen with Contrast:
+- 2.5 cm hypodense mass in the head of pancreas
+- Mild pancreatic ductal dilation
+- No evidence of metastatic disease
+- Common bile duct dilation (8mm)
+
+ASSESSMENT:
+High suspicion for pancreatic adenocarcinoma given:
+1. Clinical presentation consistent with pancreatic mass
+2. Elevated tumor markers (CA 19-9, CEA)
+3. Imaging findings suggestive of pancreatic head mass
+4. Family history of pancreatic cancer
+5. New-onset diabetes in elderly patient
+
+RECOMMENDATIONS:
+1. Endoscopic ultrasound with fine needle aspiration for tissue diagnosis
+2. Multidisciplinary oncology consultation
+3. Staging studies if malignancy confirmed
+4. Consider neoadjuvant therapy evaluation
+5. Follow-up in 1 week for biopsy results
+
+PLAN:
+Patient counseled regarding findings and need for tissue diagnosis. EUS-FNA scheduled for next week. Patient and family educated about potential diagnosis and treatment options.
+
+Dr. Michael Chen, MD
+Gastroenterology
+License: MD123456
+Date: September 27, 2025

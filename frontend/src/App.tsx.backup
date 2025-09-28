@@ -1,0 +1,458 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Plus, Users, Eye, Activity, User } from 'lucide-react';
+import { Button } from './components/ui/button';
+import { PatientCard } from './components/PatientCard';
+import { PatientDetail } from './components/PatientDetail';
+import { RiskAssessment } from './components/RiskAssessment';
+import { AIClinicalAssistant } from './components/AIClinicalAssistant';
+import { FollowUpQuestions } from './components/FollowUpQuestions';
+import { InsuranceBilling } from './components/InsuranceBilling';
+import { PatientViewEnhanced } from './components/PatientViewEnhanced';
+import Sidebar from './components/Sidebar';
+import DraggableDashboard from './components/DraggableDashboard';
+import PatientForm from './components/PatientForm';
+import { apiService } from './services/api';
+
+interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  gender: 'male' | 'female';
+  condition: string;
+  symptoms: string[];
+  symptomsCount?: number;
+  description: string;
+  contactInfo: {
+    phone: string;
+    email: string;
+    address?: string;
+  };
+}
+
+const riskFactors = [
+  'Age over 60',
+  'New-onset diabetes',
+  'Unexplained weight loss',
+  'Persistent abdominal pain',
+  'Family history of pancreatic cancer',
+  'Elevated CA 19-9'
+];
+
+const followUpQuestions = [
+  {
+    id: 1,
+    text: 'Have you experienced any unexplained weight loss in the past 6 months?',
+    answered: false
+  },
+  {
+    id: 2,
+    text: 'Does the pain radiate to your back or shoulder blades?',
+    answered: false
+  },
+  {
+    id: 3,
+    text: 'Have you noticed any changes in your stool color or consistency?',
+    answered: false
+  }
+];
+
+const insuranceData = {
+  costEstimate: { min: 300, max: 8000 },
+  icdCodes: [
+    { code: 'R10.9', description: 'Unspecified abdominal pain' },
+    { code: 'R63.4', description: 'Abnormal weight loss' },
+    { code: 'E11.9', description: 'Type 2 diabetes mellitus without complications' }
+  ],
+  cptCodes: [
+    { code: '74177', description: 'CT abdomen and pelvis with contrast' }
+  ],
+  priorAuthRequired: true
+};
+
+function App() {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [viewMode, setViewMode] = useState<'provider' | 'patient'>('provider');
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [questions, setQuestions] = useState(followUpQuestions);
+  const [useEnhancedView, setUseEnhancedView] = useState(true);
+
+  useEffect(() => {
+    loadPatients();
+  }, []);
+
+  const loadPatients = async () => {
+    try {
+      const data = await apiService.getPatients();
+      const transformedPatients: Patient[] = data.map((patient: any) => ({
+        id: `ID: ${patient.id}`,
+        name: patient.name,
+        age: patient.age,
+        gender: patient.gender || 'female',
+        condition: patient.condition || 'General Care',
+        symptoms: patient.symptoms || [],
+        symptomsCount: patient.symptoms?.length || 0,
+        description: patient.description || `${patient.age}-year-old ${patient.gender || 'patient'} with ${patient.condition || 'general medical concerns'}.`,
+        contactInfo: {
+          phone: patient.phone || '(555) 000-0000',
+          email: patient.email || `${patient.name?.toLowerCase().replace(' ', '.')}@email.com`,
+          address: patient.address
+        }
+      }));
+      setPatients(transformedPatients);
+      if (transformedPatients.length > 0) {
+        setSelectedPatient(transformedPatients[0]);
+      }
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      // Fallback to sample data if API fails
+      const samplePatients: Patient[] = [
+        {
+          id: 'ID: 1',
+          name: 'Sarah Johnson',
+          age: 65,
+          gender: 'female',
+          condition: 'Abdominal Pain',
+          symptoms: ['abdominal pain', 'weight loss'],
+          symptomsCount: 3,
+          description: '65-year-old female with 3-month history of epigastric pain, 15-pound weight loss, and new diagnosis of diabetes.',
+          contactInfo: {
+            phone: '(555) 123-4567',
+            email: 's.johnson@email.com',
+            address: '123 Main St, City, State'
+          }
+        }
+      ];
+      setPatients(samplePatients);
+      setSelectedPatient(samplePatients[0]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setShowForm(false);
+  };
+
+  const handleNewPatient = () => {
+    setShowForm(true);
+    setSelectedPatient(null);
+  };
+
+  const handleFormSubmit = (newPatientData: any) => {
+    const newPatient: Patient = {
+      id: `ID: ${patients.length + 1}`,
+      name: newPatientData.name,
+      age: newPatientData.age,
+      gender: newPatientData.gender || 'female',
+      condition: newPatientData.condition || 'General Care',
+      symptoms: newPatientData.symptoms || [],
+      symptomsCount: newPatientData.symptoms?.length || 0,
+      description: newPatientData.description || `${newPatientData.age}-year-old ${newPatientData.gender} with ${newPatientData.condition}.`,
+      contactInfo: {
+        phone: newPatientData.phone || '(555) 000-0000',
+        email: newPatientData.email || `${newPatientData.name?.toLowerCase().replace(' ', '.')}@email.com`,
+        address: newPatientData.address
+      }
+    };
+    setPatients([...patients, newPatient]);
+    setSelectedPatient(newPatient);
+    setShowForm(false);
+  };
+
+  const handleAnswerQuestion = (questionId: number, answer: string) => {
+    setQuestions(prev =>
+      prev.map(q =>
+        q.id === questionId
+          ? { ...q, answered: true }
+          : q
+      )
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading patients...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (useEnhancedView) {
+    return (
+      <div className="min-h-screen bg-stone-50">
+        {/* Header */}
+        <header className="bg-white border-b border-stone-300 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-amber-800 flex items-center justify-center">
+                  <Activity className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-amber-900">
+                    Pancreatic Cancer Clinical Copilot
+                  </h1>
+                  <p className="text-amber-700">
+                    Delivering the right medical information, to the right provider, at the right time
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <motion.button
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
+                  onClick={() => setViewMode('provider')}
+                  className={`px-4 py-2 border transition-all duration-200 ${
+                    viewMode === 'provider'
+                      ? 'bg-stone-800 text-white border-stone-800'
+                      : 'bg-white text-stone-700 border-stone-300 hover:border-stone-400'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    <span>Provider View</span>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
+                  onClick={() => setViewMode('patient')}
+                  className={`px-4 py-2 border transition-all duration-200 ${
+                    viewMode === 'patient'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-stone-700 border-stone-300 hover:border-stone-400'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span>Patient View</span>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ y: -2 }}
+                  whileTap={{ y: 0 }}
+                  onClick={() => setUseEnhancedView(false)}
+                  className="px-4 py-2 border bg-white text-stone-700 border-stone-300 hover:border-stone-400 transition-all duration-200"
+                >
+                  Classic View
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-7xl mx-auto px-8 py-8">
+          <AnimatePresence mode="wait">
+            {viewMode === 'provider' ? (
+              <motion.div
+                key="provider"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.4 }}
+                className="flex gap-8"
+              >
+                {/* Sidebar - Patient List */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="w-80 flex-shrink-0"
+                >
+                  <div className="sticky top-32">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-2 text-amber-800">
+                        <Users className="w-5 h-5" />
+                        <span>Patients</span>
+                      </div>
+                      <motion.div
+                        whileHover={{ y: -2 }}
+                        whileTap={{ y: 0 }}
+                      >
+                        <Button
+                          size="sm"
+                          className="bg-amber-800 hover:bg-amber-900 text-white border-0"
+                          onClick={handleNewPatient}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Add
+                        </Button>
+                      </motion.div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <AnimatePresence mode="popLayout">
+                        {patients.map((patient) => (
+                          <PatientCard
+                            key={patient.id}
+                            {...patient}
+                            isSelected={selectedPatient?.id === patient.id}
+                            onClick={() => handlePatientSelect(patient)}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Main Content */}
+                <div className="flex-1 min-w-0">
+                  {showForm ? (
+                    <PatientForm
+                      onSubmit={handleFormSubmit}
+                      onCancel={() => setShowForm(false)}
+                    />
+                  ) : selectedPatient ? (
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={selectedPatient.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <PatientDetail patient={selectedPatient} />
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                          <RiskAssessment
+                            score={14}
+                            level="HIGH"
+                            factors={riskFactors}
+                          />
+
+                          <AIClinicalAssistant />
+
+                          <FollowUpQuestions
+                            questions={questions}
+                            onAnswer={handleAnswerQuestion}
+                          />
+                        </div>
+
+                        <InsuranceBilling {...insuranceData} />
+                      </motion.div>
+                    </AnimatePresence>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-gray-500">
+                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">No patient selected</h3>
+                        <p className="mt-1 text-sm text-gray-500">Select a patient from the sidebar or add a new one</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="patient"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                {selectedPatient && <PatientViewEnhanced patient={selectedPatient} />}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
+
+  // Classic view (original layout)
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar
+        patients={patients}
+        selectedPatient={selectedPatient}
+        onPatientSelect={handlePatientSelect}
+        onNewPatient={handleNewPatient}
+      />
+
+      <div className="flex-1 flex flex-col">
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Pancreatic Cancer Clinical Copilot
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Delivering the right medical information, to the right provider, at the right time
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('provider')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      viewMode === 'provider'
+                        ? 'bg-white text-medical-primary shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Provider View
+                  </button>
+                  <button
+                    onClick={() => setViewMode('patient')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      viewMode === 'patient'
+                        ? 'bg-white text-medical-primary shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Patient View
+                  </button>
+                </div>
+                <button
+                  onClick={() => setUseEnhancedView(true)}
+                  className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Enhanced View
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 p-6">
+          {showForm ? (
+            <PatientForm
+              onSubmit={handleFormSubmit}
+              onCancel={() => setShowForm(false)}
+            />
+          ) : selectedPatient ? (
+            <DraggableDashboard
+              patient={selectedPatient}
+              viewMode={viewMode}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-500">
+                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No patient selected</h3>
+                <p className="mt-1 text-sm text-gray-500">Select a patient from the sidebar or add a new one</p>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default App;

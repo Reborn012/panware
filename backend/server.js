@@ -6,8 +6,10 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
+const multer = require('multer');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const MastraMedicalSystem = require('./mastra-integration');
+const ReportProcessor = require('./services/reportProcessor');
 require('dotenv').config();
 
 const app = express();
@@ -692,6 +694,50 @@ Return the response in JSON format with activities array.`;
 
 const geminiService = new GeminiAIService();
 
+// Initialize ReportProcessor
+const reportProcessor = new ReportProcessor();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    cb(null, `report_${timestamp}_${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept PDFs, images, and text files
+    const allowedMimes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/tiff',
+      'text/plain',
+      'text/csv'
+    ];
+
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, images, and text files are allowed.'));
+    }
+  }
+});
+
 // Mock Google Calendar Service
 class GoogleCalendarService {
   async scheduleAppointment(appointmentData) {
@@ -1141,35 +1187,12 @@ app.post('/api/health-routine/generate', async (req, res) => {
   try {
     const { patientData, preferences } = req.body;
 
-    // Use specialized routine agent for better results
-    const routineAgent = geminiService.agentSystem.agents.routine;
-    const agentResponse = await routineAgent.execute(
-      `Create a comprehensive personalized health routine for this patient. Include specific activities for medical monitoring, nutrition, exercise, mental health, and sleep optimization.`,
-      { patientData, preferences }
-    );
-
-    // Parse and format the routine response
-    const routine = {
-      routine_id: `routine_${Date.now()}`,
-      patient_name: patientData.name || 'Patient',
-      created_date: new Date().toISOString(),
-      generated_by: `${agentResponse.agent} (${agentResponse.specialization})`,
-      confidence: agentResponse.confidence,
-      activities: await geminiService.parseRoutineActivities(agentResponse.response, patientData),
-      ai_generated_notes: agentResponse.response,
-      suggestions: agentResponse.suggestions
-    };
-
+    // Use the direct health routine generation method
+    const routine = await geminiService.generateHealthRoutine(patientData, preferences);
     res.json(routine);
   } catch (error) {
     console.error('Health routine generation error:', error);
-    // Fallback to legacy method
-    try {
-      const routine = await geminiService.generateHealthRoutine(patientData, preferences);
-      res.json(routine);
-    } catch (fallbackError) {
-      res.status(500).json({ error: 'Failed to generate health routine' });
-    }
+    res.status(500).json({ error: 'Failed to generate health routine' });
   }
 });
 
@@ -1185,6 +1208,275 @@ app.post('/api/health-routine/schedule', async (req, res) => {
   } catch (error) {
     console.error('Health routine scheduling error:', error);
     res.status(500).json({ error: 'Failed to schedule health routine' });
+  }
+});
+
+// ENHANCED MEDICAL REPORT PROCESSING ENDPOINTS
+
+// Upload and process medical reports with OCR and AI analysis
+app.post('/api/reports/upload', upload.single('report'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const { originalname, filename, path: filePath, mimetype, size } = req.file;
+    const { patientId, reportType, sessionId } = req.body;
+
+    console.log(`📄 Processing medical report: ${originalname} (${mimetype})`);
+
+    // Determine file type for processing
+    let fileType;
+    if (mimetype === 'application/pdf') {
+      fileType = 'pdf';
+    } else if (mimetype.startsWith('image/')) {
+      fileType = 'image';
+    } else if (mimetype.startsWith('text/')) {
+      fileType = 'text';
+    } else {
+      return res.status(400).json({ error: 'Unsupported file type' });
+    }
+
+    // Process the report with OCR and AI
+    const processingResult = await reportProcessor.processReport(filePath, fileType, originalname);
+
+    if (!processingResult.success) {
+      return res.status(500).json({
+        error: 'Report processing failed',
+        details: processingResult.error
+      });
+    }
+
+    // Store report metadata
+    const reportData = {
+      id: `report_${Date.now()}`,
+      originalName: originalname,
+      fileName: filename,
+      filePath,
+      fileType,
+      mimetype,
+      size,
+      patientId: patientId || null,
+      reportType: reportType || 'unknown',
+      uploadedAt: new Date().toISOString(),
+      ...processingResult
+    };
+
+    // Broadcast processing completion to connected clients
+    if (sessionId) {
+      io.to(sessionId).emit('report_processed', {
+        reportId: reportData.id,
+        fileName: originalname,
+        success: true,
+        summary: processingResult.medicalSummary
+      });
+    }
+
+    console.log(`✅ Report processed successfully: ${originalname}`);
+    res.json(reportData);
+
+    // Clean up uploaded file after processing (optional)
+    // setTimeout(() => {
+    //   fs.unlink(filePath, (err) => {
+    //     if (err) console.error('File cleanup error:', err);
+    //   });
+    // }, 60000); // Clean up after 1 minute
+
+  } catch (error) {
+    console.error('Report upload error:', error);
+
+    // Clean up file if processing failed
+    if (req.file && req.file.path) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('File cleanup error:', err);
+      });
+    }
+
+    res.status(500).json({
+      error: 'Report processing failed',
+      details: error.message
+    });
+  }
+});
+
+// Batch upload multiple reports
+app.post('/api/reports/batch-upload', upload.array('reports', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    const { patientId, sessionId } = req.body;
+    const results = [];
+
+    console.log(`📄 Processing ${req.files.length} medical reports in batch`);
+
+    // Process each file
+    for (const file of req.files) {
+      try {
+        const { originalname, filename, path: filePath, mimetype } = file;
+
+        // Determine file type
+        let fileType;
+        if (mimetype === 'application/pdf') {
+          fileType = 'pdf';
+        } else if (mimetype.startsWith('image/')) {
+          fileType = 'image';
+        } else if (mimetype.startsWith('text/')) {
+          fileType = 'text';
+        } else {
+          results.push({
+            fileName: originalname,
+            success: false,
+            error: 'Unsupported file type'
+          });
+          continue;
+        }
+
+        // Process the report
+        const processingResult = await reportProcessor.processReport(filePath, fileType, originalname);
+
+        results.push({
+          fileName: originalname,
+          success: processingResult.success,
+          ...(processingResult.success ? {
+            summary: processingResult.medicalSummary,
+            extractedText: processingResult.extractedText?.substring(0, 500) + '...' // Truncate for batch response
+          } : {
+            error: processingResult.error
+          })
+        });
+
+      } catch (fileError) {
+        console.error(`Error processing ${file.originalname}:`, fileError);
+        results.push({
+          fileName: file.originalname,
+          success: false,
+          error: fileError.message
+        });
+      }
+    }
+
+    // Broadcast batch processing completion
+    if (sessionId) {
+      io.to(sessionId).emit('batch_reports_processed', {
+        totalFiles: req.files.length,
+        successCount: results.filter(r => r.success).length,
+        results
+      });
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    console.log(`✅ Batch processing complete: ${successCount}/${req.files.length} files processed successfully`);
+
+    res.json({
+      success: true,
+      totalFiles: req.files.length,
+      successCount,
+      results
+    });
+
+  } catch (error) {
+    console.error('Batch upload error:', error);
+    res.status(500).json({
+      error: 'Batch processing failed',
+      details: error.message
+    });
+  }
+});
+
+// Get report analysis and insights
+app.get('/api/reports/:reportId/analysis', async (req, res) => {
+  try {
+    const { reportId } = req.params;
+
+    // In a real application, you'd retrieve from database
+    // For now, return enhanced analysis format
+    const analysisResponse = {
+      reportId,
+      analysisDate: new Date().toISOString(),
+      keyFindings: [
+        "Elevated pancreatic enzyme levels detected",
+        "Imaging shows focal pancreatic lesion",
+        "Patient presents with classic risk factors"
+      ],
+      riskFactors: [
+        { factor: "Age > 60", present: true, weight: "high" },
+        { factor: "New-onset diabetes", present: true, weight: "high" },
+        { factor: "Family history", present: true, weight: "medium" }
+      ],
+      recommendations: [
+        "Urgent gastroenterology consultation within 48 hours",
+        "CT pancreas with IV contrast",
+        "Tumor marker assessment (CA 19-9, CEA)"
+      ],
+      urgencyLevel: "HIGH",
+      nextSteps: [
+        {
+          action: "Schedule GI consultation",
+          timeframe: "Within 48 hours",
+          priority: "urgent"
+        },
+        {
+          action: "Order imaging studies",
+          timeframe: "Within 72 hours",
+          priority: "high"
+        }
+      ]
+    };
+
+    res.json(analysisResponse);
+  } catch (error) {
+    console.error('Report analysis error:', error);
+    res.status(500).json({ error: 'Failed to generate report analysis' });
+  }
+});
+
+// Generate patient-friendly explanation of report
+app.post('/api/reports/explain', async (req, res) => {
+  try {
+    const { reportText, patientAge, patientName } = req.body;
+
+    if (!reportText) {
+      return res.status(400).json({ error: 'Report text is required' });
+    }
+
+    console.log(`🗣️ Generating patient-friendly explanation for ${patientName || 'patient'}`);
+
+    // Use Gemini to generate patient-friendly explanation
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const explanationPrompt = `As a compassionate doctor, explain this medical report in simple, patient-friendly language. Be honest but reassuring, and avoid medical jargon.
+
+Patient: ${patientName || 'Patient'} (Age: ${patientAge || 'Not specified'})
+
+Medical Report: ${reportText}
+
+Please provide:
+1. A simple summary of what the tests showed
+2. What this means for the patient's health
+3. What the next steps will be
+4. Any questions the patient should ask their doctor
+5. Reassuring but honest context about the findings
+
+Use a warm, empathetic tone and explain things as you would to a family member.`;
+
+    const result = await model.generateContent(explanationPrompt);
+    const explanation = result.response.text();
+
+    res.json({
+      success: true,
+      explanation,
+      patientName: patientName || 'Patient',
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Report explanation error:', error);
+    res.status(500).json({
+      error: 'Failed to generate patient explanation',
+      details: error.message
+    });
   }
 });
 
